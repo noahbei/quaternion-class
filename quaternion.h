@@ -7,6 +7,7 @@
 #define quaternion_T_h
 
 #include <cmath>
+#include <sstream>
 #include "vector3d.h"
 #include "matrix3d.h"
 
@@ -74,16 +75,34 @@ public:
     return conjugate() / (magn * magn);
   }
 
-  quaternion unit() const;
+  quaternion unit() const {
+    double k = magnitude();
+    check_divide_by_zero(k);
+    return *this / k;
+  }
 
   double norm() const { return  sqrt(w * w + x * x + y * y + z * z); }
-  double magnitude() const;
+  double magnitude() const { return norm();}
+  double mag() const { return norm();}
 
-  double dot(const quaternion& v) const;
+  double dot(const quaternion& v) const { return norm() * norm();} // norm * norm
+  //this->w
 
-  double angle(const quaternion& v) const;
+  double angle(const quaternion& v) const{
+    return 2 * acos(dot(v));
+  }
 
-  matrix3d<T> rot_matrix() const;
+  matrix3d<T> rot_matrix() const { 
+    std::stringstream ss;
+    ss << "rotation matrix of quat: " << this << " is: ";
+    matrix3d<T> rot(ss.str(), 3, 
+      { 
+      1 - 2 *(y * y + z * z),     2 * (x * y - w * z),      2 * (x * z + w * y),
+      2 * (x * y + w * z),         1 - 2 * (x * x + z * z),  2 * (y * z - w * x),
+      2 * (x * z - w * y) ,        2 * (y * z + w * x),      1 - 2 * (x * x + y * y)
+      });
+    return rot;
+  }
 
  // rotates point pt (pt.x, pt.y, pt.z) about (axis.x, axis.y, axis.z) by theta
  static vec3 rotate(const vector3D& pt, const vector3D& axis, double theta);
@@ -107,11 +126,14 @@ public:
  static void run_tests();
 
 private:
+  void check_divide_by_zero(double k) {
+    if (k == 0 || abs(k) < 1e-10) { throw new std::logic_error("Cannot divide by 0\n");}
+  }
  T w, x, y, z;
 };
 
 void plane_rotation(const std::string& msg, const quatD& plane, const std::initializer_list<double>& li) {
- matrix3d rotate = matrix3d("rot_matrix", 3, li);
+ matrix3D rotate = matrix3D("rot_matrix", 3, li);
  assert(plane.rot_matrix() == rotate);
  std::cout << msg << " is: " << plane << plane.rot_matrix() << "\n";
 }
